@@ -1,13 +1,14 @@
 {
   "expo": {
-    "name": "mocket-maama",
+    "name": "Mocket Maama",
     "slug": "mocket-maama",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "in.mocketmaama.app"
     },
     "android": {
       "adaptiveIcon": {
@@ -16,10 +17,18 @@
         "backgroundImage": "./assets/android-icon-background.png",
         "monochromeImage": "./assets/android-icon-monochrome.png"
       },
-      "predictiveBackGestureEnabled": false
+      "predictiveBackGestureEnabled": false,
+      "package": "in.mocketmaama.app"
     },
     "web": {
       "favicon": "./assets/favicon.png"
+    },
+    "scheme": "mocketmaama",
+    "plugins": [
+      "expo-router"
+    ],
+    "experiments": {
+      "typedRoutes": false
     }
   }
 }
