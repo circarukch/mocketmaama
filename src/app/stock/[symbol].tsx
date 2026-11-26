@@ -4,7 +4,7 @@ import { ActivityIndicator, KeyboardAvoidingView, Platform, Pressable, ScrollVie
 import { TradingChart } from '../../components/TradingChart';
 import { Banner, Card, Chip, Label, Stat } from '../../components/ui';
 import { findInstrument, Timeframe } from '../../lib/data';
-import { colors, inr, pct, pnlColor, signedInr } from '../../lib/format';
+import { colors, inr, pct, pnlColor, signedTokens, tokens } from '../../lib/format';
 import { usePortfolio } from '../../lib/PortfolioContext';
 import type { Side } from '../../lib/portfolio';
 import { useCandles } from '../../lib/useCandles';
@@ -37,10 +37,10 @@ export default function StockScreen() {
     const r = order({ symbol, side, qty: qtyNum, price: last });
     if (!r.ok) return setMsg({ text: r.error, good: false });
     const t = r.trade;
-    if (side === 'BUY') setMsg({ text: `Bought ${t.qty} ${symbol} at ${inr(t.price)}.`, good: true });
+    if (side === 'BUY') setMsg({ text: `Bought ${t.qty} ${symbol} at ${inr(t.price)}. ${tokens(t.qty * t.price)} taken from your balance.`, good: true });
     else {
       const p = t.realizedPnl ?? 0;
-      setMsg({ text: `Sold ${t.qty} ${symbol} at ${inr(t.price)}. ${p > 0 ? `Good call: ${signedInr(p)} profit.` : p < 0 ? `That one lost ${inr(-p)}.` : 'Break-even, no profit or loss.'}`, good: p >= 0 });
+      setMsg({ text: `Sold ${t.qty} ${symbol} at ${inr(t.price)}. ${p > 0 ? `Good call: you earned ${tokens(p)}.` : p < 0 ? `That one lost ${tokens(-p)}.` : 'Break-even, no tokens won or lost.'}`, good: p >= 0 });
     }
   };
 
@@ -78,14 +78,14 @@ export default function StockScreen() {
             <View style={styles.stats}>
               <Stat label="Quantity" value={String(pos.qty)} />
               <Stat label="Avg buy price" value={inr(pos.avgPrice)} />
-              <Stat label="Current value" value={last ? inr(last * pos.qty) : '…'} />
-              <Stat label="Unrealised P&L" value={signedInr(unreal)} color={pnlColor(unreal)} />
+              <Stat label="Current value" value={last ? tokens(last * pos.qty) : '…'} />
+              <Stat label="Open P&L" value={signedTokens(unreal)} color={pnlColor(unreal)} />
             </View>
           </Card>
         ) : null}
 
         <Card>
-          <Label>Place a practice order</Label>
+          <Label>Practice trade (1 token = ₹1)</Label>
           <View style={styles.qtyRow}>
             <Pressable style={styles.step} onPress={() => setQty(String(Math.max(1, qtyNum - 1)))}><Text style={styles.stepText}>−</Text></Pressable>
             <TextInput
@@ -98,7 +98,7 @@ export default function StockScreen() {
             <Pressable style={styles.step} onPress={() => setQty(String(qtyNum + 1))}><Text style={styles.stepText}>+</Text></Pressable>
           </View>
           <Text style={styles.cost}>
-            Order value {last ? inr(last * qtyNum) : '…'} · Cash available {inr(state.cash)}
+            Order cost {last ? tokens(last * qtyNum) : '…'} · Balance {tokens(state.cash)}
           </Text>
           <View style={styles.btnRow}>
             <Pressable style={[styles.btn, { backgroundColor: colors.profit }]} onPress={() => submit('BUY')} disabled={!last}>
@@ -109,7 +109,7 @@ export default function StockScreen() {
             </Pressable>
           </View>
           {msg ? <Text style={[styles.msg, { color: msg.good ? colors.profit : colors.loss }]}>{msg.text}</Text> : null}
-          <Text style={styles.hint}>Orders fill instantly at the last chart price. Buy markers show as green arrows on the chart, sells as red.</Text>
+          <Text style={styles.hint}>Orders fill instantly at the last chart price. Buying takes tokens from your balance; selling returns them plus your profit or minus your loss. Buy markers show as green arrows on the chart, sells as red.</Text>
         </Card>
       </ScrollView>
     </KeyboardAvoidingView>

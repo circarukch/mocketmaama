@@ -31,7 +31,7 @@
     "ios": "expo start --ios",
     "web": "expo start --web",
     "typecheck": "tsc --noEmit",
-    "test": "node --experimental-strip-types --test src/lib/*.test.ts",
+    "test": "node --experimental-strip-types --test src/lib/*.test.ts src/lib/**/*.test.ts",
     "postinstall": "node scripts/bundle-chart-lib.js",
     "lint": "expo lint"
   },

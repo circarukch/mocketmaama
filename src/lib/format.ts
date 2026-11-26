@@ -2,6 +2,12 @@ export const inr = (n: number, digits = 2) =>
   '₹' + n.toLocaleString('en-IN', { minimumFractionDigits: digits, maximumFractionDigits: digits });
 
 export const signedInr = (n: number) => (n > 0 ? '+' : n < 0 ? '−' : '') + inr(Math.abs(n));
+/** Practice tokens. 1 token = ₹1 of practice value. */
+export const tok = (n: number, digits = 2) =>
+  n.toLocaleString('en-IN', { minimumFractionDigits: digits, maximumFractionDigits: digits });
+export const tokens = (n: number, digits = 2) => `${tok(n, digits)} tokens`;
+export const signedTokens = (n: number) => (n > 0 ? '+' : n < 0 ? '−' : '') + tokens(Math.abs(n));
+
 export const pct = (n: number) => (n > 0 ? '+' : '') + n.toFixed(2) + '%';
 
 export const colors = {

@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { createPortfolio, placeOrder, summarize } from './portfolio.ts';
+import { addTokens, createPortfolio, placeOrder, summarize } from './portfolio.ts';
 
 test('buy then sell at a higher price books a profit', () => {
   let s = createPortfolio(100_000);
@@ -43,4 +43,22 @@ test('rejects orders it cannot fill', () => {
   assert.equal(placeOrder(s, { symbol: 'X', side: 'BUY', qty: 10, price: 200 }).ok, false);
   assert.equal(placeOrder(s, { symbol: 'X', side: 'SELL', qty: 1, price: 200 }).ok, false);
   assert.equal(placeOrder(s, { symbol: 'X', side: 'BUY', qty: 0, price: 200 }).ok, false);
+});
+
+test('adding tokens raises the balance but is not counted as profit', () => {
+  let s = createPortfolio(100_000);
+  const r = addTokens(s, 50_000);
+  assert.ok(r.ok);
+  s = r.state;
+  assert.equal(s.cash, 150_000);
+  let sum = summarize(s, {});
+  assert.equal(sum.funded, 150_000);
+  assert.equal(sum.totalPnl, 0);
+  s = (placeOrder(s, { symbol: 'ITC', side: 'BUY', qty: 100, price: 400 }) as any).state;
+  s = (placeOrder(s, { symbol: 'ITC', side: 'SELL', qty: 100, price: 390 }) as any).state;
+  sum = summarize(s, {});
+  assert.equal(s.cash, 149_000); // the loss came out of the token balance
+  assert.equal(sum.totalPnl, -1000);
+  assert.equal(addTokens(s, 0).ok, false);
+  assert.equal(addTokens(s, 5_000_000).ok, false);
 });

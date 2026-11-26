@@ -1,18 +1,25 @@
 import { FlatList, StyleSheet, Text, View } from 'react-native';
 import { Card, Label } from '../../components/ui';
-import { colors, inr, pnlColor, signedInr, timeIST } from '../../lib/format';
+import { colors, inr, pnlColor, signedTokens, timeIST, tokens } from '../../lib/format';
 import { usePortfolio } from '../../lib/PortfolioContext';
-import { summarize } from '../../lib/portfolio';
+import { summarize, type TokenTopUp, type Trade } from '../../lib/portfolio';
+
+type Entry = ({ kind: 'trade' } & Trade) | ({ kind: 'topup' } & TokenTopUp);
 
 export default function Journal() {
   const { state, prices } = usePortfolio();
   const s = summarize(state, prices);
+  // Trades and token top-ups in one timeline, newest first.
+  const entries: Entry[] = [
+    ...state.trades.map((t) => ({ kind: 'trade' as const, ...t })),
+    ...state.topUps.map((u) => ({ kind: 'topup' as const, ...u })),
+  ].sort((a, b) => b.time - a.time);
 
   return (
     <FlatList
       style={{ backgroundColor: colors.bg }}
       contentContainerStyle={{ padding: 16, gap: 8 }}
-      data={state.trades}
+      data={entries}
       keyExtractor={(t) => t.id}
       ListHeaderComponent={
         s.closedTrades ? (
@@ -21,15 +28,29 @@ export default function Journal() {
             <Text style={styles.verdict}>
               {s.winningTrades} of {s.closedTrades} sells made a profit ({Math.round(s.winRate * 100)}%).
             </Text>
-            {s.bestTrade ? <Text style={{ color: colors.profit }}>Best: {s.bestTrade.symbol} {signedInr(s.bestTrade.realizedPnl ?? 0)}</Text> : null}
+            {s.bestTrade ? <Text style={{ color: colors.profit }}>Best: {s.bestTrade.symbol} {signedTokens(s.bestTrade.realizedPnl ?? 0)}</Text> : null}
             {s.worstTrade && s.worstTrade !== s.bestTrade ? (
-              <Text style={{ color: pnlColor(s.worstTrade.realizedPnl ?? 0) }}>Worst: {s.worstTrade.symbol} {signedInr(s.worstTrade.realizedPnl ?? 0)}</Text>
+              <Text style={{ color: pnlColor(s.worstTrade.realizedPnl ?? 0) }}>Worst: {s.worstTrade.symbol} {signedTokens(s.worstTrade.realizedPnl ?? 0)}</Text>
             ) : null}
           </Card>
         ) : undefined
       }
-      ListEmptyComponent={<Text style={styles.empty}>Your trades will show up here, with the profit or loss of every sell.</Text>}
-      renderItem={({ item: t }) => {
+      ListEmptyComponent={<Text style={styles.empty}>Your trades and token top-ups show up here, with the tokens won or lost on every sell.</Text>}
+      renderItem={({ item }) => {
+        if (item.kind === 'topup') {
+          return (
+            <View style={styles.row}>
+              <View style={[styles.badge, { backgroundColor: colors.accent }]}>
+                <Text style={[styles.badgeText, { color: colors.bg }]}>ADD</Text>
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.sym}>Added {tokens(item.amount, 0)}</Text>
+                <Text style={styles.muted}>{timeIST(item.time)} IST</Text>
+              </View>
+            </View>
+          );
+        }
+        const t = item;
         const buy = t.side === 'BUY';
         return (
           <View style={styles.row}>
@@ -42,7 +63,7 @@ export default function Journal() {
             </View>
             {t.realizedPnl !== undefined ? (
               <View style={{ alignItems: 'flex-end' }}>
-                <Text style={{ color: pnlColor(t.realizedPnl), fontWeight: '700' }}>{signedInr(t.realizedPnl)}</Text>
+                <Text style={{ color: pnlColor(t.realizedPnl), fontWeight: '700' }}>{signedTokens(t.realizedPnl)}</Text>
                 <Text style={[styles.muted, { color: pnlColor(t.realizedPnl) }]}>{t.realizedPnl > 0 ? 'Profit' : t.realizedPnl < 0 ? 'Loss' : 'Break-even'}</Text>
               </View>
             ) : null}
