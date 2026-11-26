@@ -3,7 +3,11 @@ import { Tabs } from 'expo-router/js-tabs';
 import { colors } from '../../lib/format';
 
 type IconName = React.ComponentProps<typeof Ionicons>['name'];
-const icon = (name: IconName) => ({ color, size }: { color: unknown; size: number }) => <Ionicons name={name} color={color as string} size={size} />;
+const icon = (name: IconName) => {
+  const TabIcon = ({ color, size }: { color: unknown; size: number }) => <Ionicons name={name} color={color as string} size={size} />;
+  TabIcon.displayName = `TabIcon(${name})`;
+  return TabIcon;
+};
 
 export default function TabsLayout() {
   return (

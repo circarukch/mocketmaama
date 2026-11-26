@@ -1,40 +1,37 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { CandleResult, getCandles, Timeframe } from './data';
 import { usePortfolio } from './PortfolioContext';
+
+type Loaded = { key: string; data: CandleResult | null; error: string | null };
 
 /** Loads candles for a symbol and refreshes them every `refreshMs`. */
 export function useCandles(symbol: string, timeframe: Timeframe, refreshMs = 30_000) {
   const { setPrice } = usePortfolio();
-  const [data, setData] = useState<CandleResult | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
-  const alive = useRef(true);
-
-  const load = useCallback(async () => {
-    try {
-      const r = await getCandles(symbol, timeframe);
-      if (!alive.current) return;
-      setData(r);
-      setError(null);
-      const last = r.candles[r.candles.length - 1];
-      if (last) setPrice(symbol, last.close);
-    } catch (e) {
-      if (alive.current) setError(e instanceof Error ? e.message : String(e));
-    } finally {
-      if (alive.current) setLoading(false);
-    }
-  }, [symbol, timeframe, setPrice]);
+  const key = `${symbol}|${timeframe}`;
+  const [loaded, setLoaded] = useState<Loaded | null>(null);
 
   useEffect(() => {
-    alive.current = true;
-    setLoading(true);
+    let alive = true;
+    const load = async () => {
+      try {
+        const r = await getCandles(symbol, timeframe);
+        if (!alive) return;
+        setLoaded({ key, data: r, error: null });
+        const last = r.candles[r.candles.length - 1];
+        if (last) setPrice(symbol, last.close);
+      } catch (e) {
+        // keep showing the last good data if a refresh fails
+        if (alive) setLoaded((prev) => ({ key, data: prev?.key === key ? prev.data : null, error: e instanceof Error ? e.message : String(e) }));
+      }
+    };
     load();
     const id = setInterval(load, refreshMs);
     return () => {
-      alive.current = false;
+      alive = false;
       clearInterval(id);
     };
-  }, [load, refreshMs]);
+  }, [key, symbol, timeframe, refreshMs, setPrice]);
 
-  return { data, error, loading, reload: load };
+  const current = loaded?.key === key ? loaded : null;
+  return { data: current?.data ?? null, error: current?.error ?? null, loading: !current };
 }

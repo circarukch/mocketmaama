@@ -19,6 +19,8 @@
   },
   "devDependencies": {
     "@types/react": "~19.3.0",
+    "eslint": "^9.39.5",
+    "eslint-config-expo": "~58.0.4",
     "typescript": "~6.0.3"
   },
   "scripts": {
@@ -28,7 +30,8 @@
     "web": "expo start --web",
     "typecheck": "tsc --noEmit",
     "test": "node --experimental-strip-types --test src/lib/*.test.ts",
-    "postinstall": "node scripts/bundle-chart-lib.js"
+    "postinstall": "node scripts/bundle-chart-lib.js",
+    "lint": "expo lint"
   },
   "private": true
 }
