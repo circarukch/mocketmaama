@@ -42,3 +42,4 @@ yarn-error.*
 
 # generated chart library bundle (rebuilt on postinstall)
 src/generated/
+dist-demo/

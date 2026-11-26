@@ -1,5 +1,6 @@
 import { router } from 'expo-router';
-import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useState } from 'react';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Card, Label, Stat } from '../../components/ui';
 import { colors, inr, pct, pnlColor, signedInr } from '../../lib/format';
 import { usePortfolio } from '../../lib/PortfolioContext';
@@ -9,11 +10,13 @@ export default function Portfolio() {
   const { state, prices, reset } = usePortfolio();
   const s = summarize(state, prices);
 
-  const confirmReset = () =>
-    Alert.alert('Start over?', 'This clears all practice trades and gives you a fresh ₹10 lakh.', [
-      { text: 'Cancel', style: 'cancel' },
-      { text: 'Reset', style: 'destructive', onPress: () => reset() },
-    ]);
+  // Two-tap confirm, built into the screen so it works on iOS, Android and web.
+  const [confirming, setConfirming] = useState(false);
+  const onReset = () => {
+    if (!confirming) return setConfirming(true);
+    reset();
+    setConfirming(false);
+  };
 
   return (
     <ScrollView style={{ backgroundColor: colors.bg }} contentContainerStyle={{ padding: 16, gap: 12 }}>
@@ -52,9 +55,16 @@ export default function Portfolio() {
       )}
       <Text style={styles.muted}>Open P&L uses the latest price seen in the app. Open a stock to refresh it.</Text>
 
-      <Pressable onPress={confirmReset} style={styles.reset}>
-        <Text style={{ color: colors.loss, fontWeight: '600' }}>Reset practice account</Text>
+      <Pressable onPress={onReset} style={[styles.reset, confirming && styles.resetConfirm]}>
+        <Text style={{ color: confirming ? '#fff' : colors.loss, fontWeight: '600' }}>
+          {confirming ? 'Tap again to clear all trades and start over with ₹10 lakh' : 'Reset practice account'}
+        </Text>
       </Pressable>
+      {confirming ? (
+        <Pressable onPress={() => setConfirming(false)} style={styles.reset}>
+          <Text style={{ color: colors.muted }}>Cancel</Text>
+        </Pressable>
+      ) : null}
     </ScrollView>
   );
 }
@@ -66,5 +76,6 @@ const styles = StyleSheet.create({
   sym: { color: colors.text, fontWeight: '700', fontSize: 15 },
   muted: { color: colors.muted, fontSize: 13 },
   empty: { color: colors.muted, paddingVertical: 12 },
-  reset: { alignItems: 'center', padding: 14, marginTop: 12 },
+  reset: { alignItems: 'center', padding: 14, marginTop: 12, borderRadius: 10 },
+  resetConfirm: { backgroundColor: colors.loss },
 });

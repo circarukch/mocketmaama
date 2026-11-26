@@ -21,11 +21,18 @@
       "package": "in.mocketmaama.app"
     },
     "web": {
-      "favicon": "./assets/favicon.png"
+      "favicon": "./assets/favicon.png",
+      "output": "single",
+      "name": "Mocket Maama"
     },
     "scheme": "mocketmaama",
     "plugins": [
-      "expo-router"
+      [
+        "expo-router",
+        {
+          "asyncRoutes": false
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": false

@@ -40,7 +40,7 @@ export default function StockScreen() {
     if (side === 'BUY') setMsg({ text: `Bought ${t.qty} ${symbol} at ${inr(t.price)}.`, good: true });
     else {
       const p = t.realizedPnl ?? 0;
-      setMsg({ text: `Sold ${t.qty} ${symbol} at ${inr(t.price)}. ${p >= 0 ? 'Good call' : 'Loss'}: ${signedInr(p)}.`, good: p >= 0 });
+      setMsg({ text: `Sold ${t.qty} ${symbol} at ${inr(t.price)}. ${p > 0 ? `Good call: ${signedInr(p)} profit.` : p < 0 ? `That one lost ${inr(-p)}.` : 'Break-even, no profit or loss.'}`, good: p >= 0 });
     }
   };
 
@@ -125,7 +125,7 @@ const styles = StyleSheet.create({
   qtyRow: { flexDirection: 'row', alignItems: 'center', marginTop: 12, gap: 8 },
   step: { width: 44, height: 44, borderRadius: 8, borderWidth: 1, borderColor: colors.border, alignItems: 'center', justifyContent: 'center' },
   stepText: { color: colors.text, fontSize: 22 },
-  qty: { flex: 1, height: 44, borderRadius: 8, borderWidth: 1, borderColor: colors.border, color: colors.text, textAlign: 'center', fontSize: 18 },
+  qty: { flex: 1, width: 0, minWidth: 0, height: 44, borderRadius: 8, borderWidth: 1, borderColor: colors.border, color: colors.text, textAlign: 'center', fontSize: 18 },
   cost: { color: colors.muted, marginTop: 8, fontSize: 13 },
   btnRow: { flexDirection: 'row', gap: 12, marginTop: 12 },
   btn: { flex: 1, height: 48, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },

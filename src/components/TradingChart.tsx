@@ -5,6 +5,7 @@ import { LIGHTWEIGHT_CHARTS_JS } from '../generated/lightweightCharts';
 import type { Candle } from '../lib/data';
 import { colors } from '../lib/format';
 import type { Trade } from '../lib/portfolio';
+import { tradeMarkers } from './chartMarkers';
 
 interface Props {
   candles: Candle[];
@@ -53,33 +54,8 @@ export function TradingChart({ candles, trades, height = 320 }: Props) {
   const [ready, setReady] = useState(false);
 
   const payload = useMemo(() => {
-    const times = candles.map((c) => c.time);
-    const snap = (sec: number) => {
-      // place each trade on the candle it happened in
-      let lo = 0, hi = times.length - 1, ans = -1;
-      while (lo <= hi) {
-        const mid = (lo + hi) >> 1;
-        if (times[mid] <= sec) { ans = mid; lo = mid + 1; } else hi = mid - 1;
-      }
-      return ans >= 0 ? times[ans] : undefined;
-    };
-    const marks = trades
-      .map((t) => {
-        const time = snap(Math.floor(t.time / 1000));
-        if (time === undefined) return null;
-        const buy = t.side === 'BUY';
-        return {
-          time,
-          position: buy ? 'belowBar' : 'aboveBar',
-          color: buy ? colors.profit : colors.loss,
-          shape: buy ? 'arrowUp' : 'arrowDown',
-          text: `${buy ? 'B' : 'S'} ${t.qty}`,
-        };
-      })
-      .filter(Boolean)
-      .sort((a, b) => a!.time - b!.time);
     const data = candles.map(({ time, open, high, low, close }) => ({ time, open, high, low, close }));
-    return JSON.stringify([data, marks]);
+    return JSON.stringify([data, tradeMarkers(candles, trades)]);
   }, [candles, trades]);
 
   useEffect(() => {

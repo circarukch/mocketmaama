@@ -43,7 +43,7 @@ export default function Journal() {
             {t.realizedPnl !== undefined ? (
               <View style={{ alignItems: 'flex-end' }}>
                 <Text style={{ color: pnlColor(t.realizedPnl), fontWeight: '700' }}>{signedInr(t.realizedPnl)}</Text>
-                <Text style={[styles.muted, { color: pnlColor(t.realizedPnl) }]}>{t.realizedPnl >= 0 ? 'Profit' : 'Loss'}</Text>
+                <Text style={[styles.muted, { color: pnlColor(t.realizedPnl) }]}>{t.realizedPnl > 0 ? 'Profit' : t.realizedPnl < 0 ? 'Loss' : 'Break-even'}</Text>
               </View>
             ) : null}
           </View>

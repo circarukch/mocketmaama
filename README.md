@@ -57,3 +57,12 @@ src/lib/data/            market data providers
 - Short selling, stop-loss and limit orders, brokerage and STT charges.
 - Search across all NSE/BSE symbols, user watchlists.
 - Accounts and leaderboards (needs a backend).
+
+## Web demo
+
+The app also runs in a browser (on web the chart renders directly, without a WebView). To build a single-file demo page:
+
+```bash
+npx expo export --platform web
+node scripts/build-web-demo.js   # writes dist-demo/index.html
+```
