@@ -5,6 +5,7 @@ import { LIGHTWEIGHT_CHARTS_JS } from '../generated/lightweightCharts';
 import type { Candle } from '../lib/data';
 import { colors } from '../lib/format';
 import type { Trade } from '../lib/portfolio';
+import { candleOptions, chartOptions, tradeMarkers } from './chartMarkers';
 
 interface Props {
   candles: Candle[];
@@ -25,19 +26,13 @@ const html = `<!DOCTYPE html><html><head>
 const LWC = window.LightweightCharts;
 const chart = LWC.createChart(document.getElementById('c'), {
   autoSize: true,
-  layout: { background: { color: '${colors.card}' }, textColor: '${colors.muted}', attributionLogo: true },
-  grid: { vertLines: { color: '${colors.border}' }, horzLines: { color: '${colors.border}' } },
-  rightPriceScale: { borderColor: '${colors.border}' },
-  timeScale: { borderColor: '${colors.border}', timeVisible: true, secondsVisible: false },
+  ...${JSON.stringify(chartOptions)},
   localization: {
     priceFormatter: p => '₹' + p.toFixed(2),
     timeFormatter: t => new Date(t * 1000).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata', day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }),
   },
 });
-const series = chart.addSeries(LWC.CandlestickSeries, {
-  upColor: '${colors.profit}', downColor: '${colors.loss}', borderVisible: false,
-  wickUpColor: '${colors.profit}', wickDownColor: '${colors.loss}',
-});
+const series = chart.addSeries(LWC.CandlestickSeries, ${JSON.stringify(candleOptions)});
 const markers = LWC.createSeriesMarkers(series, []);
 let first = true;
 window.update = function (candles, marks) {
@@ -53,33 +48,8 @@ export function TradingChart({ candles, trades, height = 320 }: Props) {
   const [ready, setReady] = useState(false);
 
   const payload = useMemo(() => {
-    const times = candles.map((c) => c.time);
-    const snap = (sec: number) => {
-      // place each trade on the candle it happened in
-      let lo = 0, hi = times.length - 1, ans = -1;
-      while (lo <= hi) {
-        const mid = (lo + hi) >> 1;
-        if (times[mid] <= sec) { ans = mid; lo = mid + 1; } else hi = mid - 1;
-      }
-      return ans >= 0 ? times[ans] : undefined;
-    };
-    const marks = trades
-      .map((t) => {
-        const time = snap(Math.floor(t.time / 1000));
-        if (time === undefined) return null;
-        const buy = t.side === 'BUY';
-        return {
-          time,
-          position: buy ? 'belowBar' : 'aboveBar',
-          color: buy ? colors.profit : colors.loss,
-          shape: buy ? 'arrowUp' : 'arrowDown',
-          text: `${buy ? 'B' : 'S'} ${t.qty}`,
-        };
-      })
-      .filter(Boolean)
-      .sort((a, b) => a!.time - b!.time);
     const data = candles.map(({ time, open, high, low, close }) => ({ time, open, high, low, close }));
-    return JSON.stringify([data, marks]);
+    return JSON.stringify([data, tradeMarkers(candles, trades)]);
   }, [candles, trades]);
 
   useEffect(() => {

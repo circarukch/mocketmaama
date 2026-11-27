@@ -1,70 +1,90 @@
 import { router } from 'expo-router';
-import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { Card, Label, Stat } from '../../components/ui';
-import { colors, inr, pct, pnlColor, signedInr } from '../../lib/format';
-import { usePortfolio } from '../../lib/PortfolioContext';
+import { FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Divider } from '../../components/ui';
+import { colors, inr, pct, pnlColor, signedInr, signedTok, tok } from '../../lib/format';
 import { summarize } from '../../lib/portfolio';
+import { usePortfolio } from '../../lib/PortfolioContext';
 
 export default function Portfolio() {
-  const { state, prices, reset } = usePortfolio();
+  const { state, prices } = usePortfolio();
   const s = summarize(state, prices);
 
-  const confirmReset = () =>
-    Alert.alert('Start over?', 'This clears all practice trades and gives you a fresh ₹10 lakh.', [
-      { text: 'Cancel', style: 'cancel' },
-      { text: 'Reset', style: 'destructive', onPress: () => reset() },
-    ]);
-
   return (
-    <ScrollView style={{ backgroundColor: colors.bg }} contentContainerStyle={{ padding: 16, gap: 12 }}>
-      <Card>
-        <Label>Total account value</Label>
-        <Text style={styles.big}>{inr(s.equity)}</Text>
-        <Text style={{ color: pnlColor(s.totalPnl), fontSize: 16, fontWeight: '600' }}>
-          {signedInr(s.totalPnl)} ({pct(s.totalPct)}) since you started
-        </Text>
-        <View style={styles.stats}>
-          <Stat label="Cash" value={inr(s.cash)} />
-          <Stat label="Invested" value={inr(s.invested)} />
-          <Stat label="Booked P&L" value={signedInr(s.realizedPnl)} color={pnlColor(s.realizedPnl)} />
-          <Stat label="Open P&L" value={signedInr(s.unrealizedPnl)} color={pnlColor(s.unrealizedPnl)} />
-          <Stat label="Win rate" value={s.closedTrades ? `${Math.round(s.winRate * 100)}% of ${s.closedTrades}` : '—'} />
-          <Stat label="Winning sells" value={`${s.winningTrades}`} />
+    <FlatList
+      style={{ backgroundColor: colors.bg }}
+      data={s.positions}
+      keyExtractor={(p) => p.symbol}
+      ItemSeparatorComponent={Divider}
+      ListHeaderComponent={
+        <View>
+          <View style={styles.summary}>
+            <View style={styles.split}>
+              <View><Text style={styles.k}>Invested</Text><Text style={styles.v}>{tok(s.invested)}</Text></View>
+              <View style={{ alignItems: 'flex-end' }}><Text style={styles.k}>Current</Text><Text style={styles.v}>{tok(s.marketValue)}</Text></View>
+            </View>
+            <Divider />
+            <View style={[styles.split, { marginTop: 10 }]}>
+              <Text style={styles.k}>Holdings P&L</Text>
+              <Text style={[styles.v, { color: pnlColor(s.unrealizedPnl) }]}>{signedTok(s.unrealizedPnl)}</Text>
+            </View>
+            <View style={styles.split}>
+              <Text style={styles.k}>Booked P&L (before charges)</Text>
+              <Text style={[styles.v, { color: pnlColor(s.realizedPnl) }]}>{signedTok(s.realizedPnl)}</Text>
+            </View>
+            <View style={styles.split}>
+              <Text style={styles.k}>Charges paid</Text>
+              <Text style={styles.v}>{tok(s.charges)}</Text>
+            </View>
+            <View style={styles.split}>
+              <Text style={[styles.k, { color: colors.text, fontWeight: '700' }]}>Net trading P&L</Text>
+              <Text style={[styles.v, { color: pnlColor(s.totalPnl) }]}>{signedTok(s.totalPnl)} ({pct(s.totalPct)})</Text>
+            </View>
+            <View style={styles.split}>
+              <Text style={styles.k}>Win rate</Text>
+              <Text style={styles.v}>{s.closedTrades ? `${Math.round(s.winRate * 100)}% of ${s.closedTrades} sells` : '—'}</Text>
+            </View>
+            {s.bestTrade ? (
+              <Text style={styles.small}>
+                Best call: {s.bestTrade.symbol} <Text style={{ color: pnlColor(s.bestTrade.realizedPnl ?? 0) }}>{signedInr(s.bestTrade.realizedPnl ?? 0)}</Text>
+                {s.worstTrade && s.worstTrade !== s.bestTrade ? (
+                  <>   Worst: {s.worstTrade.symbol} <Text style={{ color: pnlColor(s.worstTrade.realizedPnl ?? 0) }}>{signedInr(s.worstTrade.realizedPnl ?? 0)}</Text></>
+                ) : null}
+              </Text>
+            ) : null}
+          </View>
+          <Text style={styles.section}>Holdings ({s.positions.length})</Text>
+          <Divider />
         </View>
-      </Card>
-
-      <Label style={{ marginTop: 4 }}>Open positions</Label>
-      {s.positions.length === 0 ? (
-        <Text style={styles.empty}>No open positions. Buy something from Markets to start practising.</Text>
-      ) : (
-        s.positions.map((p) => (
-          <Pressable key={p.symbol} style={styles.row} onPress={() => router.push(`/stock/${p.symbol}`)}>
-            <View style={{ flex: 1 }}>
-              <Text style={styles.sym}>{p.symbol}</Text>
-              <Text style={styles.muted}>{p.qty} @ {inr(p.avgPrice)}</Text>
-            </View>
-            <View style={{ alignItems: 'flex-end' }}>
-              <Text style={styles.sym}>{inr(p.marketValue)}</Text>
-              <Text style={{ color: pnlColor(p.unrealizedPnl) }}>{signedInr(p.unrealizedPnl)} ({pct(p.unrealizedPct)})</Text>
-            </View>
-          </Pressable>
-        ))
+      }
+      ListEmptyComponent={<Text style={styles.empty}>No holdings yet. Pick a stock from your Watchlist and tap BUY.</Text>}
+      renderItem={({ item: p }) => (
+        <Pressable style={({ pressed }) => [styles.row, pressed && { backgroundColor: colors.surface }]} onPress={() => router.push(`/stock/${p.symbol}`)}>
+          <View style={{ flex: 1, gap: 4 }}>
+            <Text style={styles.muted}>Qty. {p.qty} · Avg. {inr(p.avgPrice)}</Text>
+            <Text style={styles.sym}>{p.symbol}</Text>
+            <Text style={styles.muted}>Invested {tok(p.qty * p.avgPrice)}</Text>
+          </View>
+          <View style={{ alignItems: 'flex-end', gap: 4 }}>
+            <Text style={[styles.muted, { color: pnlColor(p.unrealizedPct) }]}>{pct(p.unrealizedPct)}</Text>
+            <Text style={[styles.sym, { color: pnlColor(p.unrealizedPnl) }]}>{signedInr(p.unrealizedPnl)}</Text>
+            <Text style={styles.muted}>LTP {inr(p.lastPrice)}</Text>
+          </View>
+        </Pressable>
       )}
-      <Text style={styles.muted}>Open P&L uses the latest price seen in the app. Open a stock to refresh it.</Text>
-
-      <Pressable onPress={confirmReset} style={styles.reset}>
-        <Text style={{ color: colors.loss, fontWeight: '600' }}>Reset practice account</Text>
-      </Pressable>
-    </ScrollView>
+      ListFooterComponent={<Text style={[styles.small, { padding: 16 }]}>P&L uses the latest price seen in the app. Open a stock to refresh it.</Text>}
+    />
   );
 }
 
 const styles = StyleSheet.create({
-  big: { color: colors.text, fontSize: 32, fontWeight: '800', marginVertical: 4 },
-  stats: { flexDirection: 'row', flexWrap: 'wrap', marginTop: 8 },
-  row: { flexDirection: 'row', backgroundColor: colors.card, padding: 14, borderRadius: 12, borderWidth: 1, borderColor: colors.border },
-  sym: { color: colors.text, fontWeight: '700', fontSize: 15 },
-  muted: { color: colors.muted, fontSize: 13 },
-  empty: { color: colors.muted, paddingVertical: 12 },
-  reset: { alignItems: 'center', padding: 14, marginTop: 12 },
+  summary: { margin: 16, padding: 16, borderRadius: 8, backgroundColor: colors.surface, gap: 6 },
+  split: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 2 },
+  k: { color: colors.muted, fontSize: 13 },
+  v: { color: colors.text, fontSize: 15, fontWeight: '600' },
+  small: { color: colors.muted, fontSize: 12, marginTop: 6 },
+  section: { color: colors.muted, fontSize: 12, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.5, paddingHorizontal: 16, paddingBottom: 8 },
+  empty: { color: colors.muted, padding: 16 },
+  row: { flexDirection: 'row', paddingHorizontal: 16, paddingVertical: 12 },
+  sym: { color: colors.text, fontWeight: '600', fontSize: 15 },
+  muted: { color: colors.muted, fontSize: 12 },
 });
