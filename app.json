@@ -3,7 +3,7 @@
     "name": "Mocket Maama",
     "slug": "mocket-maama",
     "version": "1.0.0",
-    "orientation": "portrait",
+    "orientation": "default",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
     "ios": {
@@ -21,7 +21,14 @@
       "package": "in.mocketmaama.app"
     },
     "web": {
-      "favicon": "./assets/favicon.png"
+      "favicon": "./assets/favicon.png",
+      "output": "single",
+      "bundler": "metro",
+      "name": "Mocket Maama",
+      "shortName": "Mocket Maama",
+      "themeColor": "#FFFFFF",
+      "backgroundColor": "#FFFFFF",
+      "lang": "en-IN"
     },
     "scheme": "mocketmaama",
     "plugins": [
@@ -29,6 +36,7 @@
     ],
     "experiments": {
       "typedRoutes": false
-    }
+    },
+    "description": "Learn to trade Indian stocks with free virtual tokens."
   }
 }

@@ -1,3 +1,5 @@
+import { Platform } from 'react-native';
+import { backendProvider } from './backend';
 import { simulatedProvider } from './simulated';
 import type { CandleResult, MarketDataProvider, Timeframe } from './types';
 import { yahooProvider } from './yahoo';
@@ -10,7 +12,12 @@ export * from './symbols';
  * app keeps working offline or if the real feed is down.
  * To use a licensed feed, add it to the front of this list.
  */
-const PROVIDERS: MarketDataProvider[] = [yahooProvider, simulatedProvider];
+const PROVIDERS: MarketDataProvider[] = [
+  ...(backendProvider ? [backendProvider] : []),
+  // browsers block direct calls to Yahoo (CORS), so the web uses the backend or simulated prices
+  ...(Platform.OS === 'web' ? [] : [yahooProvider]),
+  simulatedProvider,
+];
 
 export async function getCandles(symbol: string, timeframe: Timeframe): Promise<CandleResult> {
   let lastError: unknown;
