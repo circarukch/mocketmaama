@@ -14,7 +14,8 @@ export const supabase: SupabaseClient | null =
           storage: Platform.OS === 'web' && typeof window === 'undefined' ? undefined : AsyncStorage,
           autoRefreshToken: true,
           persistSession: true,
-          detectSessionInUrl: false,
+          // On the web, also accept the sign-in link from the email, not just the 6-digit code.
+          detectSessionInUrl: Platform.OS === 'web',
         },
       })
     : null;
