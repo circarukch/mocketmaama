@@ -25,7 +25,10 @@ function SignIn() {
   const send = async () => {
     setBusy(true);
     setError(null);
-    const { error: e } = await supabase!.auth.signInWithOtp({ email: email.trim(), options: { shouldCreateUser: true } });
+    const { error: e } = await supabase!.auth.signInWithOtp({
+      email: email.trim(),
+      options: { shouldCreateUser: true, emailRedirectTo: Platform.OS === 'web' && typeof window !== 'undefined' ? window.location.origin + window.location.pathname : undefined },
+    });
     setBusy(false);
     if (e) setError(e.message);
     else setSent(true);
@@ -51,7 +54,8 @@ function SignIn() {
           </>
         ) : (
           <>
-            <Text style={styles.field}>Enter the code sent to {email}</Text>
+            <Text style={styles.field}>Enter the 6-digit code sent to {email}</Text>
+            <Text style={styles.small}>Or tap the link in that email to sign in straight away.</Text>
             <TextInput style={styles.input} value={code} onChangeText={(v) => setCode(v.replace(/\D/g, ''))} keyboardType="number-pad" maxLength={8} placeholder="123456" placeholderTextColor={colors.muted} />
             <Button title={busy ? 'Checking…' : 'Sign in'} onPress={verify} disabled={busy || code.length < 6} />
             <Pressable onPress={() => setSent(false)}><Text style={styles.link}>Use a different email</Text></Pressable>
