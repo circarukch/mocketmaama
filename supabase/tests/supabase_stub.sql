@@ -11,3 +11,13 @@ create or replace function auth.uid() returns uuid language sql stable as
   $$ select nullif(current_setting('request.jwt.claim.sub', true), '')::uuid $$;
 grant usage on schema auth, public to anon, authenticated;
 grant execute on function auth.uid() to anon, authenticated;
+
+-- pg_net stand-in: requests are recorded; tests write responses themselves.
+create schema if not exists net;
+create sequence if not exists net.req_seq;
+create table if not exists net._http_response (id bigint primary key, status_code int, content text, created timestamptz default now());
+create table if not exists net.sent (id bigint primary key, url text);
+create or replace function net.http_get(url text, params jsonb default '{}', headers jsonb default '{}', timeout_milliseconds int default 5000)
+returns bigint language plpgsql as $$
+declare v bigint := nextval('net.req_seq');
+begin insert into net.sent values (v, url); return v; end $$;

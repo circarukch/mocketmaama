@@ -1,7 +1,5 @@
 -- Run with: supabase/tests/run.sh
 \set ON_ERROR_STOP 1
--- Supabase grants table privileges to these roles by default; RLS is what protects the data.
-grant all on all tables in schema public to anon, authenticated;
 
 insert into public.quotes (symbol, ltp, prev_close, source) values ('INFY', 1500, 1490, 'test'), ('SBIN', 800, 790, 'test');
 insert into auth.users (id, email) values ('11111111-1111-1111-1111-111111111111', 'asha@example.com'),
@@ -24,8 +22,7 @@ set role authenticated;
 set request.jwt.claim.sub = '11111111-1111-1111-1111-111111111111';
 
 -- users cannot write tables directly
-update wallets set tokens = 99999999;
-select pg_temp.check((select tokens from wallets) = 1000000, 'direct wallet update changes nothing');
+select pg_temp.fails($$update wallets set tokens = 99999999$$, 'direct wallet update');
 select pg_temp.fails($$insert into positions values ('11111111-1111-1111-1111-111111111111', 'INFY', 1000, 1)$$, 'direct position insert');
 select pg_temp.fails($$select public.match_open_orders()$$, 'user calling the matcher');
 select pg_temp.fails($$select public.private_ledger('11111111-1111-1111-1111-111111111111', 1e9, 'sell', null)$$, 'user calling the ledger');
@@ -88,5 +85,23 @@ select pg_temp.check(:t = 10000000, 'reset gives the chosen balance');
 select pg_temp.check((select count(*) from positions) = 0, 'reset clears positions');
 select pg_temp.check((select count(*) from orders where status = 'OPEN') = 0, 'reset cancels open orders');
 select pg_temp.check((select sum(amount) from token_ledger) = 10000000, 'ledger still sums to free tokens after reset');
+reset role;
+
+-- quote sync: first run only sends requests
+select pg_temp.check((public.sync_quotes() ->> 'requested')::int = 12, 'sync sends one request per instrument');
+select pg_temp.check((select url from net.sent where url like '%/INFY.NS?%') is not null, 'request URL uses the NSE suffix');
+-- feed answers INFY at 1650 and fails for TCS
+insert into net._http_response (id, status_code, content)
+  select qr.request_id, case qr.symbol when 'TCS' then 429 else 200 end,
+         '{"chart":{"result":[{"meta":{"regularMarketPrice":1650.456,"chartPreviousClose":1600}}]}}'
+    from quote_requests qr where qr.symbol in ('INFY', 'TCS');
+select public.sync_quotes() as r \gset
+select pg_temp.check((:'r'::jsonb ->> 'updated')::int = 1, 'sync stores good responses only');
+select pg_temp.check((select ltp from quotes where symbol = 'INFY') = 1650.46, 'quote parsed and rounded');
+select pg_temp.check((select count(*) from quote_requests where symbol = 'INFY') = 1, 'answered requests are replaced by new ones');
+select pg_temp.check((public.parse_quote('not json')).ltp is null, 'bad body is ignored');
+set role authenticated;
+select pg_temp.fails($$select public.sync_quotes()$$, 'user calling the quote sync');
+select pg_temp.fails($$select * from quote_requests$$, 'user reading quote requests');
 reset role;
 \echo ALL TESTS PASSED

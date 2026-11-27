@@ -30,23 +30,23 @@ Build the website: `npx expo export --platform web` writes a static single-page 
 
 ## Backend (cloud mode)
 
-Everything lives in `supabase/`:
+Everything lives in `supabase/`. The app's public settings are in `.env` (project URL and anon key; both are meant to be public, and row-level security protects the data).
 
 | Path | What it does |
 |---|---|
-| `migrations/20261127000000_trading_core.sql` | Tables (profiles, wallets, token_ledger, instruments, quotes, orders, positions), row-level security, and the only functions the app may call: `place_order`, `cancel_order`, `reset_account`, `claim_daily_tokens`, `leaderboard`, `set_display_name`. Sign-up grants 10 lakh tokens. Users can read their own rows but can't write any table, so fills and balances can't be faked. |
+| `migrations/..._trading_core.sql` | Tables (profiles, wallets, token_ledger, instruments, quotes, orders, positions), row-level security, and the only functions the app may call: `place_order`, `cancel_order`, `reset_account`, `claim_daily_tokens`, `leaderboard`, `set_display_name`. Sign-up grants 10 lakh tokens. Users can read their own rows but can't write any table, so fills and balances can't be faked. |
+| `migrations/..._api_grants.sql` | Read-only API access for the app (newer Supabase projects don't expose tables by default). |
+| `migrations/..._quote_sync_cron.sql` | Price updates inside the database: pg_cron runs `sync_quotes()` every minute, which uses pg_net to fetch prices, writes `quotes` and fills open limit orders. No service keys needed. |
 | `seed.sql` | The starter instruments. |
-| `functions/sync-quotes` | Scheduled job: refreshes `quotes` and fills open limit orders (`match_open_orders`). |
-| `functions/candles` | Chart candles for the app. Browsers can't call the price feed directly (CORS), and a licensed feed's keys must stay on the server. |
-| `tests/run.sh` | Runs the migration and 33 SQL checks (orders, limits, RLS, ledger, claims, reset) on a local Postgres. |
+| `functions/candles` | Chart candles for the app. Browsers can't call the price feed directly (CORS), and a licensed feed's keys must stay on the server. Without it, charts fall back to simulated history (trading still uses real server prices). |
+| `tests/run.sh` | Runs the migrations and ~40 SQL checks (orders, limits, RLS, ledger, claims, reset, quote sync) on a local Postgres. |
 
-Set up:
+Set up a new project:
 
-1. Create a Supabase project. Enable **Email** sign-in with OTP codes (Auth → Providers → Email; the email template should include `{{ .Token }}`).
-2. `npx supabase link --project-ref <ref>` then `npx supabase db push` and run `seed.sql` in the SQL editor.
-3. `npx supabase functions deploy sync-quotes candles`
-4. Schedule `sync-quotes` every minute in market hours with pg_cron + pg_net (Integrations → Cron), sending `Authorization: Bearer <service role key>`.
-5. Copy `.env.example` to `.env.local` and fill in the project URL and anon key. The app switches to cloud mode automatically.
+1. Create a Supabase project. Email sign-in is on by default; make sure the Magic Link email template includes `{{ .Token }}` so users get a 6-digit code.
+2. Run the migrations then `seed.sql` (SQL Editor, or `npx supabase db push`).
+3. Deploy `functions/candles` (Edge Functions → Deploy a new function → Via editor, or `npx supabase functions deploy candles`).
+4. Put the project URL and anon key in `.env`.
 
 The trading rules exist twice and must stay in sync: `src/lib/portfolio.ts` + `src/lib/charges.ts` (offline mode, ticket previews) and the SQL functions (cloud mode). Both test suites check the same charge figures.
 
@@ -54,7 +54,7 @@ The trading rules exist twice and must stay in sync: `src/lib/portfolio.ts` + `s
 
 The prototype uses Yahoo Finance's chart endpoint (free, ~15 min delayed, unofficial, personal use only) and falls back to simulated prices, with a banner, when it can't load. On the web without cloud mode, prices are simulated because browsers block direct calls to Yahoo.
 
-**Before a public launch, plug in a licensed delayed feed** (TrueData, Global Datafeeds or similar). Only `supabase/functions/sync-quotes` and `supabase/functions/candles` change; the app and database stay the same. NSE's display licence for 15-minute delayed data is about ₹1.2 lakh a year per segment versus about ₹23.45 lakh for real-time.
+**Before a public launch, plug in a licensed delayed feed** (TrueData, Global Datafeeds or similar). Only `quote_url()` / `parse_quote()` in the quote-sync migration and `supabase/functions/candles` change; the app and database stay the same. NSE's display licence for 15-minute delayed data is about ₹1.2 lakh a year per segment versus about ₹23.45 lakh for real-time.
 
 ## Project layout
 

@@ -20,11 +20,11 @@ export default function StockScreen() {
   const inst = findInstrument(symbol);
   const [tf, setTf] = useState<Timeframe>('1d');
   const { data, error, loading } = useCandles(symbol, tf, tf === '1d' ? 60_000 : 20_000);
-  const { state } = usePortfolio();
+  const { state, prices } = usePortfolio();
   const insets = useSafeAreaInsets();
 
   const candles = data?.candles ?? [];
-  const last = candles[candles.length - 1]?.close;
+  const last = prices[symbol] ?? candles[candles.length - 1]?.close;
   const prev = candles[candles.length - 2]?.close;
   const pos = state.positions[symbol];
   const trades = useMemo(() => state.trades.filter((t) => t.symbol === symbol), [state.trades, symbol]);

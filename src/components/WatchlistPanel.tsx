@@ -11,9 +11,9 @@ import { useCandles } from '../lib/useCandles';
 
 function Row({ item, selected }: { item: Instrument; selected: boolean }) {
   const { data } = useCandles(item.symbol, '1d', 60_000);
-  const { state } = usePortfolio();
+  const { state, prices } = usePortfolio();
   const c = data?.candles;
-  const last = c?.[c.length - 1]?.close;
+  const last = prices[item.symbol] ?? c?.[c.length - 1]?.close;
   const prev = c?.[c.length - 2]?.close;
   const change = last && prev ? last - prev : 0;
   const held = state.positions[item.symbol]?.qty;

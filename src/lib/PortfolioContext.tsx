@@ -87,6 +87,27 @@ export function PortfolioProvider({ children }: { children: React.ReactNode }) {
     return cloud.subscribe(() => refresh().catch(() => {}));
   }, [mode, session, refresh]);
 
+  // cloud: prices come from the server's quotes, the same prices orders fill at
+  useEffect(() => {
+    if (mode !== 'cloud' || !session) return;
+    let alive = true;
+    const load = () =>
+      cloud.loadQuotes().then((qs) => {
+        if (!alive || !qs.length) return;
+        setPrices((p) => {
+          const next = { ...p };
+          for (const q of qs) next[q.symbol] = q.ltp;
+          return next;
+        });
+      }).catch(() => {});
+    load();
+    const id = setInterval(load, 30_000);
+    return () => {
+      alive = false;
+      clearInterval(id);
+    };
+  }, [mode, session]);
+
   // offline: persist
   useEffect(() => {
     if (mode === 'offline' && ready) AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(state)).catch(() => {});
@@ -94,6 +115,7 @@ export function PortfolioProvider({ children }: { children: React.ReactNode }) {
 
   const setPrice = useCallback(
     (symbol: string, price: number) => {
+      if (mode === 'cloud') return; // cloud mode uses server quotes (see above)
       setPrices((p) => (p[symbol] === price ? p : { ...p, [symbol]: price }));
       // offline: open limit orders fill when the price reaches them (the server does this in cloud mode)
       if (mode === 'offline') {
